@@ -1,0 +1,471 @@
+================================================================================
+  REPASO EXAMEN — GENERACIÓN DE CÓDIGO (LAB 11)
+  Diseño de Lenguajes de Programación — Universidad de Oviedo
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. VISIÓN GENERAL DEL COMPILADOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El compilador tiene estas fases, en orden:
+
+  fuente.txt
+      │
+      ▼
+  [Lexer + Parser]  → AST (árbol sintáctico abstracto)
+      │
+      ▼
+  [IdentificationVisitor]  → resuelve referencias de variables (scope)
+      │
+      ▼
+  [TypeCheckingVisitor]  → comprueba tipos y anota cada nodo con su tipo
+      │
+      ▼
+  [OffsetVisitor]  → calcula y asigna offsets de memoria a cada variable
+      │
+      ▼
+  [ExecuteCGVisitor]  → genera el fichero MAPL de salida
+      (usa ValueCGVisitor y AddressCGVisitor internamente)
+
+El AST no se modifica después del type checking. Los visitors de CG solo leen.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. LOS TRES VISITORS DE GENERACIÓN DE CÓDIGO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hay tres visitors especializados. Cada uno tiene una responsabilidad distinta:
+
+┌─────────────────────┬──────────────────────────────────────────────────────┐
+│ Visitor             │ Responsabilidad                                      │
+├─────────────────────┼──────────────────────────────────────────────────────┤
+│ AddressCGVisitor    │ Deja la DIRECCIÓN de memoria de una expresión lvalue │
+│                     │ en la cima de la pila                                │
+├─────────────────────┼──────────────────────────────────────────────────────┤
+│ ValueCGVisitor      │ Deja el VALOR de una expresión en la cima de la pila │
+├─────────────────────┼──────────────────────────────────────────────────────┤
+│ ExecuteCGVisitor    │ Genera código para sentencias y definiciones.        │
+│                     │ No deja nada en la pila (efectos laterales)          │
+└─────────────────────┴──────────────────────────────────────────────────────┘
+
+Regla clave: "lvalue" = expresión que tiene dirección (se puede asignar).
+Solo Variable, SquareBrackets (array[i]) y Access (struct.campo) son lvalue.
+
+AbsCGVisitor es la clase base de los tres: hereda de AbsVisitor y guarda
+la referencia al CodeGenerator (cg).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. AddressCGVisitor — PLANTILLAS DE CÓDIGO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Solo visita nodos con lvalue = true.
+
+  VARIABLE GLOBAL (scope == 0):
+  ─────────────────────────────
+  address[[Variable]] =
+      pusha  <offset>          ← dirección absoluta en el segmento de datos
+
+  VARIABLE LOCAL o PARÁMETRO (scope != 0):
+  ─────────────────────────────────────────
+  address[[Variable]] =
+      push bp                  ← base del marco actual
+      pushi  <offset>          ← offset (negativo para locales, +4 para params)
+      addi                     ← BP + offset = dirección real
+
+  ¿Por qué es diferente?
+  - Las globales tienen dirección fija conocida en compilación → pusha directo.
+  - Las locales y parámetros están relativas a BP, que cambia en cada llamada
+    a función → hay que calcular la dirección en tiempo de ejecución.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. ValueCGVisitor — PLANTILLAS DE CÓDIGO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  LITERALES:
+  ──────────
+  value[[CharLiteral]]   → pushb  <ascii>
+  value[[IntLiteral]]    → pushi  <valor>
+  value[[DoubleLiteral]] → pushf  <valor>
+
+  VARIABLE (lvalue → rvalue):
+  ───────────────────────────
+  value[[Variable]] =
+      address[[Variable]]      ← deja dirección en pila
+      load<sufijo>             ← carga el valor desde esa dirección
+
+  OPERACIÓN ARITMÉTICA (+ - * /):
+  ────────────────────────────────
+  value[[e1 op e2]] =
+      value[[e1]]
+      convertir(e1.type → resultado.type)
+      value[[e2]]
+      convertir(e2.type → resultado.type)
+      add|sub|mul|div<sufijo del resultado>
+
+  MÓDULO (%):
+  ────────────
+  Igual que aritmética pero con modi (solo enteros).
+
+  UNARY MINUS (-e):
+  ─────────────────
+  value[[-e]] =
+      push 0 (del tipo de e)
+      value[[e]]
+      subi|subf
+
+  UNARY NEGATION (!e):
+  ────────────────────
+  value[[!e]] =
+      value[[e]]
+      not
+
+  OPERACIÓN LÓGICA (&& ||):
+  ──────────────────────────
+  value[[e1 && e2]] =
+      value[[e1]]
+      convertir(e1.type → resultado.type)
+      value[[e2]]
+      convertir(e2.type → resultado.type)
+      and | or
+
+  COMPARACIÓN (< > <= >= == !=):
+  ────────────────────────────────
+  Importante: los dos operandos deben tener el mismo tipo antes de comparar.
+  Se usa e1.type.supertype(e2.type) para encontrar el tipo común.
+
+  value[[e1 op e2]] =
+      supertype = e1.type.supertype(e2.type)
+      value[[e1]]
+      convertir(e1.type → supertype)
+      value[[e2]]
+      convertir(e2.type → supertype)
+      lt|gt|le|ge|eq|ne<sufijo del supertype>
+
+  CAST ((tipo)e):
+  ───────────────
+  value[[(tipo)e]] =
+      value[[e]]
+      convertir(e.type → tipo)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. ExecuteCGVisitor — PLANTILLAS DE CÓDIGO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PROGRAM:
+  ────────
+  execute[[Program]] =
+      comentario con variables globales
+      call main
+      halt
+      para cada FunctionDefinition: execute[[funcDef]]
+
+  FUNCTION DEFINITION:
+  ────────────────────
+  execute[[FunctionDef]] =
+      label <nombre>:
+      comentario con parámetros y locales
+      enter <bytes_locales>
+      para cada sentencia: execute[[sentencia]]
+      si returnType == void: ret 0, <bytes_locales>, <bytes_params>
+
+  WRITE:
+  ──────
+  execute[[write expr]] =
+      value[[expr]]
+      out<sufijo>
+
+  READ:
+  ─────
+  execute[[read expr]] =
+      address[[expr]]       ← deja la dirección donde guardar
+      in<sufijo>            ← lee del teclado y push el valor
+      store<sufijo>         ← pop valor + pop dirección → guarda
+
+  ASSIGNMENT (lhs = rhs):
+  ────────────────────────
+  execute[[lhs = rhs]] =
+      address[[lhs]]        ← dónde guardar
+      value[[rhs]]          ← qué guardar
+      convertir(rhs.type → lhs.type)
+      store<sufijo de lhs>
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. CodeGenerator — QUÉ HACE Y POR QUÉ EXISTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Es una clase auxiliar que encapsula la escritura de texto MAPL en el fichero
+de salida. Los visitors NO escriben cadenas directamente: solo llaman métodos
+de CodeGenerator con significado semántico.
+
+  Ejemplos:
+    cg.arithmetic("+", type)  →  escribe  "addi" o "addf" según el tipo
+    cg.load(type)             →  escribe  "loadb", "loadi" o "loadf"
+    cg.convert(from, to)      →  escribe  "b2i", "i2f", "f2i", "i2b"...
+
+Principio de diseño aplicado: Single Responsibility.
+  - Los visitors solo recorren el AST y deciden QUÉ generar.
+  - CodeGenerator decide CÓMO escribirlo en texto.
+
+El sufijo ("b", "i", "f") se obtiene con type.suffix(), que está definido
+en cada clase de tipo. Así CodeGenerator no necesita conocer los tipos:
+solo llama type.suffix() y el propio tipo sabe cuál es el suyo.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. MÉTODOS AÑADIDOS A LOS TIPOS (Type / AbsType)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Se añadieron dos métodos nuevos a la interfaz Type para la generación de código:
+
+  String suffix()
+  ───────────────
+  Devuelve el sufijo MAPL del tipo:
+    CharType   → "b"   (byte, 1 byte)
+    IntType    → "i"   (integer, 2 bytes)
+    DoubleType → "f"   (float, 4 bytes)
+  AbsType lanza excepción por defecto (ArrayType, RecordType no tienen sufijo).
+
+  Type supertype(Type other)
+  ──────────────────────────
+  Devuelve el tipo "mayor" entre this y other.
+  Orden de promoción: double > int > char
+
+    CharType.supertype(IntType)    → IntType
+    CharType.supertype(DoubleType) → DoubleType
+    IntType.supertype(DoubleType)  → DoubleType
+    DoubleType.supertype(anything) → DoubleType
+
+  Se usa en Comparation para que los dos operandos tengan el mismo tipo
+  antes de comparar. Sin esto, no se puede saber qué instrucción MAPL usar
+  (lti vs ltf).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. CONVERSIONES DE TIPO (convert en CodeGenerator)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MAPL tiene instrucciones específicas para convertir entre tipos primitivos:
+
+  char  → int     : b2i
+  int   → double  : i2f
+  double → int    : f2i
+  int   → char    : i2b
+  char  → double  : b2i + i2f  (dos pasos, no hay instrucción directa)
+
+Si from y to son el mismo tipo, no se emite nada (no-op).
+
+Cuándo se llama a convert:
+  - En aritmética: cada operando se convierte al tipo del resultado antes de operar.
+  - En comparación: cada operando se convierte al supertype antes de comparar.
+  - En cast: la expresión se convierte al tipo destino del cast.
+  - En assignment: el RHS se convierte al tipo del LHS antes de store.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. INSTRUCCIONES MAPL CLAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PUSH:
+    pushb <n>    push 1 byte (char)
+    pushi <n>    push 2 bytes (int)
+    pushf <n>    push 4 bytes (double)
+    pusha <n>    push dirección de 2 bytes (global)
+    push bp      push valor del registro BP
+
+  LOAD/STORE:
+    load[b|i|f]  pop dirección → push valor de esa dirección
+    store[b|i|f] pop valor, pop dirección → guarda valor en dirección
+
+  ARITMÉTICA:     add[i|f]  sub[i|f]  mul[i|f]  div[i|f]  modi
+  COMPARACIÓN:    lt[i|f]  gt[i|f]  le[i|f]  ge[i|f]  eq[i|f]  ne[i|f]
+                  → siempre devuelven int (0 o 1)
+  LÓGICA:         and  or  not   (operan sobre enteros)
+
+  I/O:
+    out[b|i|f]   pop valor → muestra en consola
+    in[b|i|f]    lee del teclado → push valor
+
+  FUNCIONES:
+    call <id>    invoca función (push return address, salta)
+    enter <n>    reserva n bytes en pila para variables locales
+    ret A, B, C  A=bytes retorno, B=bytes locales, C=bytes params
+    halt         termina el programa
+
+  SALTOS (lab 12):
+    jmp <label>  salto incondicional
+    jz  <label>  salta si top de pila == 0
+    jnz <label>  salta si top de pila != 0
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. OFFSETS Y MEMORIA (OffsetVisitor)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  TAMAÑOS:
+    char   = 1 byte
+    int    = 2 bytes
+    double = 4 bytes
+    dirección (puntero) = 2 bytes
+    array  = dimensión × numberOfBytes(tipo base)
+    struct = suma de numberOfBytes() de todos sus campos
+
+  GLOBALES:    offset = acumulado desde 0 (creciente)
+  PARÁMETROS:  offset = 4 + acumulado (orden INVERSO de declaración)
+  LOCALES:     offset = -acumulado (orden normal, valores negativos)
+  STRUCTS:     offset de cada campo desde 0 (igual que globales)
+
+  El +4 en parámetros: BP+0 = Previous BP (2 bytes) + BP+2 = Return Address
+  (2 bytes) = 4 bytes de control que hay que saltar.
+
+  Estructura del stack frame:
+
+    dirección alta
+    ┌───────────────────┐
+    │  Parámetro N      │  ← BP + 4 + offset_acumulado
+    │  ...              │
+    │  Parámetro 1      │  ← BP + 4
+    ├───────────────────┤
+    │  Return Address   │  ← BP + 2
+    ├───────────────────┤
+    │  Previous BP      │  ← BP
+    ├───────────────────┤
+    │  Variable local 1 │  ← BP - offset1  (offset1 > 0)
+    │  Variable local 2 │  ← BP - offset2
+    └───────────────────┘  ← SP
+    dirección baja
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. PATRÓN VISITOR — RECORDATORIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada nodo del AST implementa accept(visitor, param) que llama a visitor.visit(this).
+Esto permite añadir operaciones al AST sin modificar sus clases.
+
+  nodo.accept(visitor, param)
+      └→ visitor.visit(nodo, param)  ← dispatch polimórfico
+
+AbsVisitor proporciona implementaciones por defecto (recorren hijos sin hacer
+nada), de forma que cada visitor concreto solo sobreescribe los nodos que le
+interesan.
+
+Los tres visitors CG tienen comportamiento por defecto heredado de AbsVisitor,
+lo que significa que los nodos no implementados simplemente se ignoran
+(no generan código ni errores).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. EJEMPLO COMPLETO TRAZADO — write (double)2*r
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Expresión: (double)2 * r   donde r es double local (offset = -4)
+
+  ExecuteCGVisitor.visit(WriteStatement)
+    └→ ValueCGVisitor.visit(ArithmeticOperation)  [tipo resultado: double]
+         ├→ ValueCGVisitor.visit(Cast)             [(double)2]
+         │    └→ ValueCGVisitor.visit(IntLiteral)  → pushi 2
+         │    └→ cg.convert(IntType → DoubleType)  → i2f
+         ├→ cg.convert(DoubleType → DoubleType)    → (no-op, mismo tipo)
+         ├→ ValueCGVisitor.visit(Variable r)
+         │    └→ AddressCGVisitor.visit(Variable r)
+         │         └→ push bp / pushi -4 / addi
+         │    └→ cg.load(DoubleType)               → loadf
+         ├→ cg.convert(DoubleType → DoubleType)    → (no-op)
+         └→ cg.arithmetic("*", DoubleType)         → mulf
+    └→ cg.out(DoubleType)                          → outf
+
+  Instrucciones generadas:
+      pushi   2
+      i2f
+      push    bp
+      pushi   -4
+      addi
+      loadf
+      mulf
+      outf
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. PREGUNTAS TIPO EXAMEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P: ¿Qué visitor genera código para una expresión como 1 < 2?
+R: ValueCGVisitor.visit(Comparation). Calcula el supertype (IntType), empuja
+   los dos valores con pushi, y emite lti.
+
+P: ¿Qué diferencia hay entre value[[Variable]] y address[[Variable]]?
+R: address deja la dirección de memoria en pila. value llama a address y
+   luego hace load para obtener el valor almacenado en esa dirección.
+
+P: ¿Por qué read usa address y no value?
+R: Porque necesita saber DÓNDE guardar el valor leído, no el valor actual
+   de la variable. El orden es: push dirección → in (push valor) → store.
+
+P: ¿Qué genera ret y con qué parámetros?
+R: ret A, B, C donde A = bytes del valor de retorno, B = bytes de variables
+   locales a liberar, C = bytes de parámetros a liberar.
+   Para una función void sin parámetros y 6 bytes de locales: ret 0, 6, 0.
+
+P: ¿Por qué se necesita el supertype en una comparación?
+R: MAPL tiene lti (para int) y ltf (para double) pero no mezcla tipos.
+   Antes de comparar, ambos operandos deben tener el mismo tipo. Si se
+   compara un int con un double, el int se convierte a double con i2f
+   y luego se usa ltf.
+
+P: ¿Qué pasaría si se añadiera un tipo long de 8 bytes?
+R: Hay que crear LongType con numberOfBytes()=8, suffix() que devuelva "l"
+   (o lo que defina MAPL), supertype() que lo sitúe por encima de double,
+   y añadir instrucciones MAPL para ese tamaño. OffsetVisitor no cambia
+   porque usa numberOfBytes() polimórficamente.
+
+P: ¿Por qué los parámetros se recorren en orden inverso en OffsetVisitor?
+R: Los argumentos se empujan al stack de izquierda a derecha, así que el
+   último argumento queda más cerca de BP (en BP+4). Recorrer en orden
+   inverso asigna el offset más pequeño (BP+4) al primer parámetro,
+   manteniendo coherencia con el orden de declaración.
+
+P: ¿Cuántos bytes ocupa el stack frame de una función void f(int a, char b)
+   con locales double x, int y?
+R:
+   Parámetros:  int a = 2 bytes, char b = 1 byte → total 3 bytes (param side)
+   Locales:     double x = 4 bytes, int y = 2 bytes → total 6 bytes
+   enter 6
+   ret 0, 6, 3
+
+P: ¿Qué visitor y qué instrucciones genera c = 'a'?
+R: ExecuteCGVisitor.visit(AssigmentStatement):
+     address[[c]] → pusha 0         (c es global, offset 0)
+     value[['a']] → pushb 97        (ASCII de 'a')
+     convert(CharType → CharType)   → no-op
+     store(CharType)                → storeb
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+14. ERRORES COMUNES A EVITAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✗ Usar pusha para variables locales → la dirección cambia en cada invocación.
+  ✓ Usar push bp + pushi offset + addi.
+
+✗ Olvidar convert antes de una operación cuando los tipos difieren.
+  ✓ Siempre convertir cada operando al tipo del resultado antes de operar.
+
+✗ En read, llamar a value[[expr]] en lugar de address[[expr]].
+  ✓ read necesita la dirección destino, no el valor actual.
+
+✗ En ret, poner los bytes en orden incorrecto.
+  ✓ ret <retorno>, <locales>, <parámetros>.
+
+✗ Usar suffix hardcodeado ("i", "f") en lugar de type.suffix().
+  ✓ Siempre type.suffix() para que funcione con cualquier tipo.
+
+✗ Llamar a OffsetVisitor después del CG visitor.
+  ✓ OffsetVisitor debe ejecutarse ANTES que cualquier visitor de CG,
+    porque el CG necesita los offsets ya calculados.
+
+================================================================================
