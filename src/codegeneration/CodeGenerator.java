@@ -28,10 +28,7 @@ public class CodeGenerator {
         this.out = new PrintWriter(new FileWriter(outputFile));
     }
 
-    // -----------------------------------------------------------------------
     // Debugging info
-    // -----------------------------------------------------------------------
-
     public void source(String sourceFile) {
         out.println("#source\t\"" + sourceFile + "\"");
         out.println();
@@ -44,10 +41,7 @@ public class CodeGenerator {
         }
     }
 
-    // -----------------------------------------------------------------------
     // Push instructions
-    // -----------------------------------------------------------------------
-
     public void pushb(int asciiCode) {
         out.println("\tpushb\t" + asciiCode);
     }
@@ -68,10 +62,7 @@ public class CodeGenerator {
         out.println("\tpush\tbp");
     }
 
-    // -----------------------------------------------------------------------
     // Load / Store
-    // -----------------------------------------------------------------------
-
     public void load(Type type) {
         out.println("\tload" + type.suffix());
     }
@@ -80,10 +71,8 @@ public class CodeGenerator {
         out.println("\tstore" + type.suffix());
     }
 
-    // -----------------------------------------------------------------------
-    // Arithmetic / Logical / Comparison
-    // -----------------------------------------------------------------------
 
+    // Arithmetic / Logical / Comparison
     public void arithmetic(String operator, Type type) {
         switch (operator) {
             case "+" -> out.println("\tadd" + type.suffix());
@@ -122,10 +111,7 @@ public class CodeGenerator {
         }
     }
 
-    // -----------------------------------------------------------------------
     // Type conversions
-    // -----------------------------------------------------------------------
-
     public void convert(Type from, Type to) {
         if (from.getClass().equals(to.getClass())) return;
 
@@ -141,10 +127,7 @@ public class CodeGenerator {
         throw new IllegalArgumentException("Cannot convert " + from + " to " + to);
     }
 
-    // -----------------------------------------------------------------------
     // I/O
-    // -----------------------------------------------------------------------
-
     public void out(Type type) {
         out.println("\tout" + type.suffix());
     }
@@ -153,18 +136,13 @@ public class CodeGenerator {
         out.println("\tin" + type.suffix());
     }
 
-    // -----------------------------------------------------------------------
     // Stack operations
-    // -----------------------------------------------------------------------
-
     public void addi() {
         out.println("\taddi");
     }
 
-    // -----------------------------------------------------------------------
-    // Function support
-    // -----------------------------------------------------------------------
 
+    // Function support
     public void label(String name) {
         out.println();
         out.println(name + ":");
@@ -186,10 +164,7 @@ public class CodeGenerator {
         out.println("\thalt");
     }
 
-    // -----------------------------------------------------------------------
     // Comments
-    // -----------------------------------------------------------------------
-
     public void comment(String text) {
         out.println("\t' * " + text);
     }
@@ -198,10 +173,7 @@ public class CodeGenerator {
         out.println("' " + text);
     }
 
-    // -----------------------------------------------------------------------
     // Flush / close
-    // -----------------------------------------------------------------------
-
     public void close() {
         out.flush();
         out.close();

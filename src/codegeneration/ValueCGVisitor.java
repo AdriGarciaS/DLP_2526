@@ -7,7 +7,6 @@ import ast.type.*;
  * VALUE visitor: genera código que deja el VALOR de una expresión
  * en la cima de la pila.
  *
- * ─────────────────────────────────────────────────────────────────
  * CHAR LITERAL
  * value[[CharLiteral → CHAR_CONSTANT]] =
  *     <pushb> (int) CHAR_CONSTANT
@@ -17,7 +16,7 @@ import ast.type.*;
  *     <pushi> INT_CONSTANT
  *
  * DOUBLE LITERAL
- * value[[DoubleLiteral → DOUBLE_CONSTANT]] =
+ * value[[DoubleLiteral → DOUBLE_CONSTANT]] =s
  *     <pushf> DOUBLE_CONSTANT
  *
  * VARIABLE (lvalue → rvalue: cargar de memoria)
@@ -65,7 +64,7 @@ import ast.type.*;
  * value[[Cast : e1 → (type) e2]] =
  *     value[[e2]]
  *     e2.type.convertTo(e1.type)
- * ─────────────────────────────────────────────────────────────────
+
  */
 public class ValueCGVisitor extends AbsCGVisitor {
 
@@ -76,7 +75,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         this.addressCGVisitor = addressCGVisitor;
     }
 
-    // ── Constants ──────────────────────────────────────────────────────────
+    // Constants
 
     @Override
     public Void visit(ArithmeticOperation arith, Void param) {
@@ -104,7 +103,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Variable (lvalue → rvalue) ─────────────────────────────────────────
+    // Variable (lvalue → rvalue)
 
     @Override
     public Void visit(Comparation comparation, Void param) {
@@ -122,7 +121,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Arithmetic ─────────────────────────────────────────────────────────
+    // Arithmetic
 
     @Override
     public Void visit(DoubleLiteral doubleLiteral, Void param) {
@@ -131,7 +130,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Modulus ────────────────────────────────────────────────────────────
+    // Modulus
 
     @Override
     public Void visit(IntLiteral intLiteral, Void param) {
@@ -140,7 +139,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Unary minus ────────────────────────────────────────────────────────
+    // Unary minus
 
     @Override
     public Void visit(LogicOperation logic, Void param) {
@@ -153,7 +152,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Unary negation (!) ─────────────────────────────────────────────────
+    // Unary negation (!)
 
     @Override
     public Void visit(ModuleOperation module, Void param) {
@@ -166,7 +165,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Logical operation ──────────────────────────────────────────────────
+    // Logical operation
 
     @Override
     public Void visit(UnaryMinus unaryMinus, Void param) {
@@ -181,7 +180,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Comparison ─────────────────────────────────────────────────────────
+    //  Comparison
 
     @Override
     public Void visit(UnaryNegation unaryNegation, Void param) {
@@ -191,7 +190,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // ── Cast ───────────────────────────────────────────────────────────────
+    // Cast
 
     @Override
     public Void visit(Variable variable, Void param) {

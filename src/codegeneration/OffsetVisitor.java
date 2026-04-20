@@ -46,10 +46,8 @@ public class OffsetVisitor extends AbsVisitor<Void, Void> {
      *         accumulativeOffset += rec.type.numberOfBytes();
      *     }
      *
-     * ========================================================================
      */
 
-    // Variables de estado para llevar offsets acumulativos durante la visita
     private int globalOffset = 0;
     private int localOffset = 0;
     private int paramOffset = 0;

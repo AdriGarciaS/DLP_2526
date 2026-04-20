@@ -9,7 +9,6 @@ import ast.expression.Variable;
  *
  * Solo se implementan nodos con lvalue = true:
  *
- * ─────────────────────────────────────────────────────────────────
  * VARIABLE (global, scope == 0)
  * address[[Variable : expression → ID]] =
  *     <pusha> expression.definition.offset
@@ -19,7 +18,6 @@ import ast.expression.Variable;
  *     <push bp>
  *     <pushi> expression.definition.offset
  *     <addi>
- * ─────────────────────────────────────────────────────────────────
  */
 public class AddressCGVisitor extends AbsCGVisitor {
 
@@ -33,7 +31,7 @@ public class AddressCGVisitor extends AbsCGVisitor {
         cg.line(variable.getLine());
 
         if (def.getScope() == 0) {
-            // Variable global: dirección absoluta
+            // Variable global
             cg.pusha(def.getOffset());
         } else {
             // Variable local o parámetro: dirección relativa a BP
