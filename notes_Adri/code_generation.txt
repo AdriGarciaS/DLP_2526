@@ -1,0 +1,165 @@
+-- STACK --
+
+La pila es una zona de memoria que crece hacia direcciones decrecientes. Se utiliza para almacenar parámetros, variables
+locales e información de control de cada función. El registro BP (Base Pointer) apunta siempre a la información de
+control del marco de pila actual.
+
+ESTRUCTURA BÁSICA
+
+Direcciones altas (mayores)
++---------------------------+
+| Parámetro N               |  ← BP + 4 + offset_acumulado (el último en ser pusheado está más cerca de BP)
+| ...                       |
+| Parámetro 1               |  ← BP + 4 (primer parámetro, offset más pequeño)
++---------------------------+
+| Return Address (2 bytes)  |  ← BP + 2
++---------------------------+
+| Previous BP (2 bytes)     |  ← BP (apunta al BP del marco anterior)
++---------------------------+
+| Variable local 1          |  ← BP - offset_local1 (el offset es negativo)
+| Variable local 2          |  ← BP - offset_local2
+| ...                       |
++---------------------------+  ← SP (Stack Pointer) apunta aquí después de reservar locales
+Direcciones bajas (menores)
+
+ORDEN DE CRECIMIENTO DE LA PILA:
+
+Al invocar una función:
+1. Se empujan los argumentos de izquierda a derecha (el último queda en top).
+2. Se ejecuta CALL: pushea dirección de retorno y salta a la función.
+3. La función empuja el BP anterior (BP viejo) y actualiza BP = SP.
+4. Se ejecuta ENTER N: reserva N bytes para variables locales (SP = SP - N).
+
+Al retornar (RET A, B, C):
+1. Se deja el valor de retorno (A bytes) en la cima de la pila.
+2. Se liberan B bytes de variables locales (SP = SP + B).
+3. Se restaura BP anterior y dirección de retorno.
+4. Se liberan C bytes de parámetros (SP = SP + C).
+5. La ejecución continúa en la dirección de retorno.
+
+-- SIZES --
+método numberOfBytes() returnea el valor adecuado
+
+- char      : 1 byte
+- int       : 2 bytes
+- double    : 4 bytes
+- direcciones (punteros) : 2 bytes
+- void      : 0 bytes (no ocupa)
+- arrays    : tamaño = dimension * numberOfBytes(tipo base)
+- structs   : suma de numberOfBytes() de todos sus campos
+
+-- ORGANIZACIÓN DE MEMORIA --
+
+MAPL divide la memoria en dos grandes zonas estáticas (tamaño fijo) y una dinámica (pila):
+
+1. Segmento de código: instrucciones del programa.
+2. Segmento de datos (memoria estática): variables globales, constantes, literales.
+   - Direcciones crecientes desde 0.
+3. Pila (stack): parámetros, locales, información de control.
+   - Direcciones decrecientes desde el final del segmento de datos.
+
+-- OFFSETS: CÓMO SE CALCULAN (LAB 10) --
+
+El OffsetVisitor traversa AST y asigna "offset" a cada VariableDefinition y RecordField ya que son los que mas tarde
+necesitaremos acceder para saber sus valores (o instrucciones para las funciones). Estos tmb incluyen las funciones ,
+ya que al estar definidas con el nombre como variable tmb son variables.
+
+VARIABLES GLOBALES (en Program)
+- Se recorren en orden de aparición.
+- offset = acumulado_global
+- acumulado_global += numberOfBytes(tipo)
+- Las direcciones de 0 en adelnate (primeras en aparecer en el codigo, tanto variables como functions as variables)
+
+PARÁMETROS (en FunctionDefinition)
+- Se recorren en orden INVERSO al de declaración.
+- offset = 4 + acumulado_params
+- acumulado_params += numberOfBytes(tipo)
+- El +4 salta la dirección de retorno (2 bytes) y el BP anterior (2 bytes).
+
+VARIABLES LOCALES (en FunctionDefinition)
+- Se recorren en orden normal.
+- acumulado_locales += numberOfBytes(tipo)
+- offset = -acumulado_locales
+- Son negativos porque están por debajo de BP.
+
+CAMPOS DE STRUCT (en RecordType)
+- Se recorren en orden de declaración.
+- offset = acumulado_campos
+- acumulado_campos += numberOfBytes(tipo_campo)
+- Empiezan en 0, igual que las globales.
+
+-- ¿POR QUÉ SE SUMA 4 AL OFFSET DE LOS PARÁMETROS? --
+
+La base para calcular la dirección de un parámetro dentro del stack frame es BP + 4.
+PQ justo encima de BP se almacenan dos campos de control de 2 bytes cada uno:
+
+- BP+0 : Previous BP (valor del BP del marco anterior)
+- BP+2 : Return Address (dirección de retorno al programa llamante)
+
+Sumados ocupan 4 bytes. Por lo tanto, el primer byte disponible para los parámetros está en BP+4.
+Como en MAPL los parámetros se empujan de izquierda a derecha, el último parámetro empujado queda en la dirección más baja (BP+4). Por eso se recorren en orden inverso para asignar offsets crecientes a partir de BP+4.
+
+Si el lenguaje evaluara los parámetros en orden distinto (por ejemplo, de derecha a izquierda), el orden de asignación de offsets cambiaría, pero la base BP+4 se mantendría porque los 4 bytes de control son fijos.
+
+
+-- PREGUNTAS TIPO EXAMEN SEGUN LO QUE DIJO EN CLASE  --
+
+ORDEN DE LOS PARAMETROS
+¿Qué cambiaría si los parámetros se evaluaran de derecha a izquierda?
+El orden de asignación de offsets de parámetros sería el normal (no inverso), porque el primer parámetro de la lista
+sería el último en ser pusheado y, por tanto, el que quedaría más cerca de BP.
+
+CAMBIARLE EL TAMAÑO A UN TYPO
+¿Qué cambiaría si int  ocupase 4 bytes?
+Solo habría que modificar IntType.numberOfBytes() para que devuelva 4. El OffsetVisitor se adaptaría automáticamente
+porque usa ese método para acumular offsets.
+
+OFFSET TYPO RECURSIVO
+¿Cómo se calcula el offset de un campo de struct anidado?
+Se visita primero el struct más interno, calculando sus offsets locales desde 0. Luego ese struct se trata como un
+tipo más dentro del struct externo, sumando su tamaño total al offset acumulado del campo correspondiente.
+
+NUEVO TYPE (que habria que hacer )
+Si añadiéramos un nuevo tipo "long" de 8 bytes, ¿qué partes del compilador habría que modificar?
+   - Añadir la clase LongType que implemente Type y devuelva 8 en numberOfBytes().
+   - Extender la gramática y el parser para reconocer la palabra clave 'long'
+   - Actualizar las reglas de promoción ya que long sería el tipo más grande, por encima de double
+   - Añadir instrucciones MAPL para operar con long
+   - El OffsetVisitor no necesita cambios porque usa numberOfBytes() polimórficamente.
+
+
+¿Cómo cambiaría el cálculo de offsets si el lenguaje permitiera funciones anidadas (nested functions) con acceso a
+variables de la función padre?
+   - Se necesitaría un "static link" (puntero al marco de la función padre) almacenado en el stack frame.
+   - Ese campo ocuparía 2 bytes adicionales, probablemente entre el Previous BP y los parámetros.
+   - Los offsets de parámetros y locales se desplazarían: la base para parámetros pasaría de BP+4 a BP+6 (porque se
+        añade el static link de 2 bytes).
+   - El OffsetVisitor tendría que ser consciente del nivel de anidamiento para calcular correctamente los offsets.
+
+¿Qué modificaciones hay que hacer en el OffsetVisitor para soportar variables globales con inicialización no constante
+(p.ej., int a = f(2); )?
+   - El cálculo de offsets en sí no cambia, porque la dirección de la variable global sigue siendo fija.
+   - Sin embargo, la inicialización no se puede hacer en tiempo de compilación. Se debería generar código de
+   inicialización al principio del programa (antes de llamar a main) que evalúe la expresión y asigne el valor a la variable global.
+   - El OffsetVisitor solo se encarga de asignar offsets; la inicialización se manejaría en la fase de generación de código .
+
+REFERENCIAS COMO PARAMETROS
+Si quisiéramos implementar paso de parámetros por referencia (p.ej., en C++ con '&'), ¿cómo cambiaría el stack y los offsets?
+    - En lugar de pasar el valor, se pasa la dirección del argumento (2 bytes).
+    - El tipo del parámetro formal sería un puntero/referencia, por lo que numberOfBytes() devolvería 2.
+    - El OffsetVisitor seguiría funcionando igual (acumula 2 bytes por cada parámetro).
+    - En la generación de código, al acceder al parámetro, habría que hacer una indirección adicional
+    (loadi para obtener la dirección y luego otro loadi para el valor).
+
+-- RESUMEN LAB10 IMP --
+
+- Tamaños: char=1, int=2, double=4, addr=2.
+- Globales: offset desde 0 creciente.
+- Parámetros: offset = 4 + acum (orden inverso).
+- Locales: offset = -acum (orden normal).
+- Structs: campos desde 0 creciente.
+- Instrucciones clave: pusha, pushi, load/store, enter, ret, call, jmp/jz/jnz, b2i, i2f.
+- La pila crece hacia abajo; BP apunta al previous BP; los parámetros están en BP+4 en adelante; los locales en BP-offset.
+- El +4 se debe a los 4 bytes de control (Previous BP + Return Address).
+
+---

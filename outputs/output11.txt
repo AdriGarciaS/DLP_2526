@@ -1,0 +1,173 @@
+#source	"inputs/inputLab11.txt"
+
+' Global variables:
+'   CHAR c (offset 0)
+'   INT a (offset 1)
+	call	main
+	halt
+#line	4
+
+main:
+	' * Parameters
+	' * Local variables
+	' *   DOUBLE r (offset -4)
+	' *   INT i (offset -6)
+	enter	6
+#line	7
+	pusha	0
+	pushb	97
+	storeb
+#line	8
+	' * Write
+	pusha	0
+	loadb
+	outb
+	' * Write
+	pushb	10
+	outb
+#line	10
+	pusha	1
+	pushi	1
+	storei
+#line	11
+	push	bp
+	pushi	-6
+	addi
+	pushb	48
+	b2i
+	pushi	3
+	muli
+	storei
+#line	13
+	' * Write
+	pusha	1
+	loadi
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	14
+	' * Write
+	push	bp
+	pushi	-6
+	addi
+	loadi
+	outi
+	' * Write
+	pushb	10
+	outb
+#line	16
+	' * Read
+	push	bp
+	pushi	-4
+	addi
+	inf
+	storef
+#line	17
+	' * Write
+	pushi	2
+	i2f
+	push	bp
+	pushi	-4
+	addi
+	loadf
+	mulf
+	outf
+	' * Write
+	pushb	10
+	outb
+#line	19
+	' * Write
+	pushi	3
+	i2f
+	pushf	4.5
+	subf
+	outf
+	' * Write
+	pushb	32
+	outb
+#line	20
+	' * Write
+	pushb	48
+	b2i
+	i2f
+	pushf	48.0
+	divf
+	outf
+	' * Write
+	pushb	32
+	outb
+#line	21
+	' * Write
+	pushi	0
+	pushi	1
+	modi
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	22
+	' * Write
+	pushb	48
+	b2i
+	pushb	49
+	b2i
+	addi
+	outi
+	' * Write
+	pushb	10
+	outb
+#line	24
+	' * Write
+	pushi	1
+	pushi	2
+	lti
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	25
+	' * Write
+	pushi	4
+	pushi	3
+	gei
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	26
+	' * Write
+	pushi	5
+	pushi	5
+	eqi
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	27
+	' * Write
+	pushi	1
+	pushi	2
+	and
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	28
+	' * Write
+	pushi	0
+	pushi	3
+	or
+	outi
+	' * Write
+	pushb	32
+	outb
+#line	29
+	' * Write
+	pushi	0
+	not
+	outi
+	' * Write
+	pushb	10
+	outb
+	ret	0, 6, 0
