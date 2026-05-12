@@ -48,6 +48,11 @@ public class ErrorType extends  AbsLocalable implements Type {
     }
 
     @Override
+    public String suffix() {
+        return "ERROR";
+    }
+
+    @Override
     public Type arithmetic(Type other, int line, int col) {
         return this;
     }

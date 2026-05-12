@@ -10,16 +10,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 /**
- * Abstrae la escritura de instrucciones MAPL en el fichero de salida.
- * Los visitors solo llaman métodos semánticos; la lógica de texto queda aquí.
- *
- * Estándar: Single Responsibility — separar la generación de texto de la
- * lógica de traversal del AST.
  *
  * El sufijo de tipo (b/i/f) se obtiene siempre mediante type.suffix(),
  * definido en la propia clase de tipo — nunca hardcodeado aquí.
  */
 public class CodeGenerator {
+
 
     private final PrintWriter out;
     private int currentLine = 0;

@@ -9,15 +9,17 @@ import ast.expression.Variable;
  *
  * Solo se implementan nodos con lvalue = true:
  *
- * VARIABLE (global, scope == 0)
- * address[[Variable : expression → ID]] =
- *     <pusha> expression.definition.offset
- *
  * VARIABLE (local o parámetro, scope != 0)
  * address[[Variable : expression → ID]] =
- *     <push bp>
- *     <pushi> expression.definition.offset
- *     <addi>
+ *      if(Variable.def.scope == 0){
+ *          <pusha> expression.definition.offset
+ *      }
+ *      else {
+ *        <push bp>
+ *  *     <pushi> expression.definition.offset
+ *  *     <addi>
+ *      }
+ *
  */
 public class AddressCGVisitor extends AbsCGVisitor {
 
