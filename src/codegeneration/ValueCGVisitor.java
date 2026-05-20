@@ -64,7 +64,16 @@ import ast.type.*;
  * value[[Cast : e1 → (type) e2]] =
  *     value[[e2]]
  *     e2.type.convertTo(e1.type)
-
+ *
+ * SQUARE BRACKETS (array indexing, lvalue → rvalue)
+ * value[[SquareBrackets : e1 → e2[e3]]] =
+ *     address[[e1]]
+ *     load e1.type.suffix()
+ *
+ * ACCESS (struct field, lvalue → rvalue)
+ * value[[Access : e1 → e2.ID]] =
+ *     address[[e1]]
+ *     load e1.type.suffix()
  */
 public class ValueCGVisitor extends AbsCGVisitor {
 
@@ -76,6 +85,14 @@ public class ValueCGVisitor extends AbsCGVisitor {
     }
 
     // Constants
+
+    @Override
+    public Void visit(Access access, Void param) {
+        cg.line(access.getLine());
+        access.accept(addressCGVisitor, param);
+        cg.load(access.getType());
+        return null;
+    }
 
     @Override
     public Void visit(ArithmeticOperation arith, Void param) {
@@ -96,6 +113,8 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
+    // Variable (lvalue → rvalue)
+
     @Override
     public Void visit(CharLiteral charLiteral, Void param) {
         cg.line(charLiteral.getLine());
@@ -103,7 +122,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // Variable (lvalue → rvalue)
+    // Arithmetic
 
     @Override
     public Void visit(Comparation comparation, Void param) {
@@ -121,7 +140,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // Arithmetic
+    // Modulus
 
     @Override
     public Void visit(DoubleLiteral doubleLiteral, Void param) {
@@ -130,7 +149,23 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // Modulus
+    // Unary minus
+
+    /*
+     * FUNCTION INVOCATION (como expresión)
+     * value[[FunctionInvocation : e1 → ID expression*]] =
+     *     for each arg: value[[arg]]
+     *     <call> ID
+     */
+    @Override
+    public Void visit(FunctionInvocation funcInvocation, Void param) {
+        cg.line(funcInvocation.getLine());
+        funcInvocation.getParameters().forEach(p -> p.accept(this, param));
+        cg.call(funcInvocation.getFunction().getName());
+        return null;
+    }
+
+    // Unary negation (!)
 
     @Override
     public Void visit(IntLiteral intLiteral, Void param) {
@@ -139,7 +174,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // Unary minus
+    // Logical operation
 
     @Override
     public Void visit(LogicOperation logic, Void param) {
@@ -152,7 +187,7 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // Unary negation (!)
+    //  Comparison
 
     @Override
     public Void visit(ModuleOperation module, Void param) {
@@ -165,7 +200,15 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    // Logical operation
+    // Cast
+
+    @Override
+    public Void visit(SquareBrackets sq, Void param) {
+        cg.line(sq.getLine());
+        sq.accept(addressCGVisitor, param);
+        cg.load(sq.getType());
+        return null;
+    }
 
     @Override
     public Void visit(UnaryMinus unaryMinus, Void param) {
@@ -180,8 +223,6 @@ public class ValueCGVisitor extends AbsCGVisitor {
         return null;
     }
 
-    //  Comparison
-
     @Override
     public Void visit(UnaryNegation unaryNegation, Void param) {
         cg.line(unaryNegation.getLine());
@@ -189,8 +230,6 @@ public class ValueCGVisitor extends AbsCGVisitor {
         cg.not();
         return null;
     }
-
-    // Cast
 
     @Override
     public Void visit(Variable variable, Void param) {

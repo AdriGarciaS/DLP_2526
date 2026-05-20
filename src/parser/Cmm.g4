@@ -16,11 +16,6 @@ program returns [Program ast ]
     {$ast = new Program($defs);}
     ;
 
-//type returns [Type ast]:
-//    t=variableType {$ast = $t.ast;}
-//    | 'void' {$ast = new VoidType();}
-//    ;
-
 variableType returns [Type ast]:
     b1=buildInType {$ast = $b1.ast;}
     | r1=record {$ast = $r1.ast; }
@@ -46,20 +41,20 @@ record returns [RecordType ast]:
     { $ast = new RecordType(fields); }
     ;
 
-// TODO necesuti adaptarlo a function con los types permitidos (new production)
+
 varDefinition returns [List<VariableDefinition> ast = new ArrayList<VariableDefinition>()]:
     t1=variableType id1=ID {$ast.add(new VariableDefinition($id1.getLine(), $id1.getCharPositionInLine()+1, $t1.ast, $id1.text));}
-    (',' id2=ID {$ast.add(new VariableDefinition($id1.getLine(), $id1.getCharPositionInLine()+1, $t1.ast, $id2.text));} )* ';'
+    (',' id2=ID {$ast.add(new VariableDefinition($id2.getLine(), $id2.getCharPositionInLine()+1, $t1.ast, $id2.text));} )* ';'
     ;
 
 mainFunctionDefinition returns [FunctionDefinition ast]
     locals [List<VariableDefinition> localVars = new ArrayList<VariableDefinition>(),
             List<Statement> localStmts = new ArrayList<Statement>()]:
-    returnT='void' name='main' '(' args=functionDefinitionArgs')' '{'
+    returnT='void' name='main' '('')' '{'
         (v=varDefinition { $localVars.addAll($v.ast); })*
         (s=statement { $localStmts.addAll($s.ast); })*
     '}'
-    {$ast = new FunctionDefinition( $name.getLine(), $name.getCharPositionInLine()+1, new VoidType(), $name.text, $args.ast, $localVars, $localStmts);}
+    {$ast = new FunctionDefinition( $name.getLine(), $name.getCharPositionInLine()+1, new VoidType(), $name.text, new ArrayList<VariableDefinition>(), $localVars, $localStmts);}
     ;
 
 functionDefinition returns [FunctionDefinition ast]
@@ -74,11 +69,6 @@ functionDefinition returns [FunctionDefinition ast]
 functionLocalVar returns [List<VariableDefinition> ast = new ArrayList<VariableDefinition>()]:
     (v1=varDefinition { $ast.addAll($v1.ast); })*
     ;
-
-functionBodyStatements returns [List<Statement> ast = new ArrayList<Statement>()]:
-    (st=statement { $ast.addAll($st.ast); })*
-    ;
-
 
 // includes empity args
 functionDefinitionArgs returns [List<VariableDefinition> ast = new ArrayList<VariableDefinition>()]:
@@ -99,7 +89,7 @@ statement returns [List<Statement> ast = new ArrayList<Statement>()]:
         {$ast.add( new IfStatement($e1.ast.getLine(), $e1.ast.getColumn(), $e1.ast, $b1.ast , $b2.ast ) );}
     | 'while' '('e1=expression')' b1=block
         {$ast.add( new WhileStatement( $e1.ast.getLine(), $e1.ast.getColumn(), $e1.ast, $b1.ast ) );}
-    | <assoc=right> e1=expression '=' e2=expression ';'
+    | <assoc=right> e1=expression '=' e2=expression ';' //assoc rigth for multi assigment
         {$ast.add( new AssigmentStatement ($e1.ast.getLine(), $e1.ast.getColumn(), $e1.ast , $e2.ast ) );}
     | 'return' e1=expression ';'
         {$ast.add ( new ReturnStatement( $e1.ast.getLine(), $e1.ast.getColumn(), $e1.ast  ) );}

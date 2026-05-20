@@ -16,9 +16,19 @@ public class RecordType extends AbsType implements Type {
 
 
     public RecordType(List<RecordField> recordFields) {
+        for (RecordField field : recordFields) {
+            if (fieldExists(field.getName())) {
+                new ErrorType(field.getLine(), field.getColumn(),
+                        "Duplicate field '" + field.getName() + "' in struct");
+            } else {
+                this.recordFields.add(field);
+            }
+        }
 
-        this.recordFields = recordFields;
+    }
 
+    private boolean fieldExists(String name) {
+        return recordFields.stream().anyMatch(f -> f.getName().equals(name));
     }
 
     public List<RecordField> getRecordFields() {
@@ -28,22 +38,6 @@ public class RecordType extends AbsType implements Type {
 
     public void setRecordFields(List<RecordField> recordFields) {
         this.recordFields = recordFields;
-    }
-
-
-    private void createNewField(VariableDefinition var) {
-        if (!fieldExists(var.getName())) {
-            recordFields.add(new RecordField(var.getLine(), var.getColumn(), var.getVariableType(),
-                    var.getName()));
-        }
-        else {
-            new ErrorType(var.getLine(), var.getColumn(),
-                    "Repeated struct field -> " + var.getName() + " already exists");
-        }
-    }
-
-    private boolean fieldExists(String name) {
-        return recordFields.stream().anyMatch(f -> f.getName().equals(name));
     }
 
     @Override

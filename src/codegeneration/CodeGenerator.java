@@ -19,6 +19,8 @@ public class CodeGenerator {
 
     private final PrintWriter out;
     private int currentLine = 0;
+    // Labels and jumps
+    private int labels = 0;
 
     public CodeGenerator(String outputFile) throws IOException {
         this.out = new PrintWriter(new FileWriter(outputFile));
@@ -35,6 +37,30 @@ public class CodeGenerator {
             out.println("#line\t" + lineNumber);
             currentLine = lineNumber;
         }
+    }
+
+    public String nextLabel() {
+        return "label" + labels++;
+    }
+
+    public void labelDef(String label) {
+        out.println(" " + label + ":");
+    }
+
+    public void jmp(String label) {
+        out.println("\tjmp\t" + label);
+    }
+
+    public void jz(String label) {
+        out.println("\tjz\t" + label);
+    }
+
+    public void jnz(String label) {
+        out.println("\tjnz\t" + label);
+    }
+
+    public void muli() {
+        out.println("\tmuli");
     }
 
     // Push instructions
@@ -173,5 +199,9 @@ public class CodeGenerator {
     public void close() {
         out.flush();
         out.close();
+    }
+
+    public void pop(Type type) {
+        out.println("\tpop" + type.suffix());
     }
 }

@@ -45,8 +45,6 @@ public class LexerHelper {
         return '\0';
     }
 
-    // TODO: Implement the lexemeToChar and lexemeToReal methods
-
     public static double lexemeToReal(String str) {
         try {
             return Double.parseDouble(str);

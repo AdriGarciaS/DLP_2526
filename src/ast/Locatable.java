@@ -1,6 +1,6 @@
 package ast;
 
-public interface Localable extends ASTNode {
+public interface Locatable extends ASTNode {
     int getLine();
     int getColumn();
 }

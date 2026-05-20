@@ -1,10 +1,10 @@
 package ast;
 
-public abstract class AbsLocalable implements Localable {
+public abstract class AbsLocatable implements Locatable {
     protected int line;
     protected int column;
 
-    public AbsLocalable(int line, int column) {
+    public AbsLocatable(int line, int column) {
         this.line = line;
         this.column = column;
     }

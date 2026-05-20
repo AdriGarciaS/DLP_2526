@@ -3,12 +3,13 @@ package codegeneration;
 import ast.Program;
 import ast.definition.FunctionDefinition;
 import ast.definition.VariableDefinition;
+import ast.expression.FunctionInvocation;
 import ast.statement.*;
 import ast.type.FunctionType;
+import ast.type.Type;
 import ast.type.VoidType;
 
 /*
- * EXECUTE visitor: genera código para sentencias y definiciones.
  *
  * PROGRAM
  * execute[[Program → definition*]] =
@@ -48,6 +49,9 @@ public class ExecuteCGVisitor extends AbsCGVisitor {
 
     private final ValueCGVisitor valueCGVisitor;
     private final AddressCGVisitor addressCGVisitor;
+    private Type currentReturnType;
+    private int currentLocalBytes;
+    private int currentParamBytes;
 
     public ExecuteCGVisitor(CodeGenerator cg, ValueCGVisitor valueCGVisitor,
                             AddressCGVisitor addressCGVisitor) {
@@ -101,11 +105,33 @@ public class ExecuteCGVisitor extends AbsCGVisitor {
 
         cg.enter(localBytes);
 
+        currentReturnType = ft.getReturnType();
+        currentLocalBytes = localBytes;
+        currentParamBytes = paramBytes;
+
         funcDef.getBodyStatements().forEach(s -> s.accept(this, param));
 
         if (ft.getReturnType() instanceof VoidType) {
             cg.ret(0, localBytes, paramBytes);
         }
+        return null;
+    }
+
+    @Override
+    public Void visit(IfStatement ifStatement, Void param) {
+        cg.line(ifStatement.getLine());
+        String elseLabel = cg.nextLabel();
+        String exitLabel = cg.nextLabel();
+        cg.comment("If statement");
+        ifStatement.getConditional().accept(valueCGVisitor, param);
+        cg.jz(elseLabel);
+        cg.comment("Body of the if branch");
+        ifStatement.getIfBlock().forEach(s -> s.accept(this, param));
+        cg.jmp(exitLabel);
+        cg.labelDef(elseLabel);
+        cg.comment("Body of the else branch");
+        ifStatement.getElseBlock().forEach(s -> s.accept(this, param));
+        cg.labelDef(exitLabel);
         return null;
     }
 
@@ -129,6 +155,32 @@ public class ExecuteCGVisitor extends AbsCGVisitor {
     }
 
     @Override
+    public Void visit(ReturnStatement returnStatement, Void param) {
+        cg.line(returnStatement.getLine());
+        cg.comment("Return");
+        returnStatement.getReturned().accept(valueCGVisitor, param);
+        cg.convert(returnStatement.getReturned().getType(), currentReturnType);
+        cg.ret(currentReturnType.numberOfBytes(), currentLocalBytes, currentParamBytes);
+        return null;
+    }
+
+    @Override
+    public Void visit(WhileStatement whileStatement, Void param) {
+        cg.line(whileStatement.getLine());
+        String condLabel = cg.nextLabel();
+        String exitLabel = cg.nextLabel();
+        cg.comment("While");
+        cg.labelDef(condLabel);
+        whileStatement.getCondition().accept(valueCGVisitor, param);
+        cg.jz(exitLabel);
+        cg.comment("Body of the while statement");
+        whileStatement.getWhileBlock().forEach(s -> s.accept(this, param));
+        cg.jmp(condLabel);
+        cg.labelDef(exitLabel);
+        return null;
+    }
+
+    @Override
     public Void visit(AssigmentStatement assign, Void param) {
         cg.line(assign.getLine());
         assign.getLHS().accept(addressCGVisitor, param);
@@ -137,4 +189,30 @@ public class ExecuteCGVisitor extends AbsCGVisitor {
         cg.store(assign.getLHS().getType());
         return null;
     }
+
+    /*
+     * FUNCTION INVOCATION (como sentencia)
+     * execute[[FunctionInvocation : statement → ID expression*]] =
+     *     for each arg: value[[arg]]
+     *     <call> ID
+     *     if returnType != void: <pop> returnType.suffix()
+     *
+     * RETURN STATEMENT
+     * execute[[ReturnStatement : statement → expression]] =
+     *     value[[expression]]
+     *     convert expression.type → returnType
+     *     <ret> returnBytes, localBytes, paramBytes
+     */
+    @Override
+    public Void visit(FunctionInvocation funcInvocation, Void param) {
+        cg.line(funcInvocation.getLine());
+        funcInvocation.getParameters().forEach(p -> p.accept(valueCGVisitor, param));
+        cg.call(funcInvocation.getFunction().getName());
+        FunctionType ft = (FunctionType) funcInvocation.getFunction().getDefinition().getType();
+        if (!(ft.getReturnType() instanceof VoidType)) {
+            cg.pop(ft.getReturnType());
+        }
+        return null;
+    }
+
 }

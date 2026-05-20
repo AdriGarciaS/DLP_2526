@@ -1,12 +1,12 @@
 package ast.type;
 
-import ast.AbsLocalable;
+import ast.AbsLocatable;
 import ast.errorhandler.ErrorHandler;
 import semantics.Visitor;
 
 import java.util.List;
 
-public class ErrorType extends  AbsLocalable implements Type {
+public class ErrorType extends AbsLocatable implements Type {
 
     private String errorMessage;
 

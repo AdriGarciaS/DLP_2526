@@ -1,8 +1,8 @@
 package ast.statement;
 
-import ast.AbsLocalable;
+import ast.AbsLocatable;
 
-public abstract class AbsStatement extends AbsLocalable implements Statement {
+public abstract class AbsStatement extends AbsLocatable implements Statement {
 
     public AbsStatement(int line, int column) {
         super(line, column);

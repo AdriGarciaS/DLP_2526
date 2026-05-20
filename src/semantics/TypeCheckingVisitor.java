@@ -44,7 +44,7 @@ public class TypeCheckingVisitor extends AbsVisitor<Void, Void> implements Visit
      *     expression.lvalue = true
      *
      * (P) FunctionInvocation: expression1 -> expression2 expression3*
-     * (R) expression1.type = expression2.type.parenthesis( tipos de argumentos )
+     * (R) expression1.type = expression2.type.parenthesis( expression3* )
      *     expression.lvalue = false
      *
      * (P) SquareBrackets: expression1 -> expression2 expression3
@@ -92,7 +92,6 @@ public class TypeCheckingVisitor extends AbsVisitor<Void, Void> implements Visit
      * (P) ReturnStatement: statement -> expression
      * (R) expression.type.mustBeReturnable(currentReturnType)
      *
-     * DEFINITIONS
      * (P) FunctionDefinition: definition -> type ID vardef* statement*
      * (R) El tipo de retorno de la función se almacena en currentReturnType
      *     para comprobar los return del cuerpo.
@@ -102,7 +101,6 @@ public class TypeCheckingVisitor extends AbsVisitor<Void, Void> implements Visit
     // Tipo de retorno de la función que se está visitando actualmente
     private Type currentReturnType;
 
-    //  Expressions
 
     @Override
     public Void visit(Program program, Void param) {
@@ -253,7 +251,6 @@ public class TypeCheckingVisitor extends AbsVisitor<Void, Void> implements Visit
         return null;
     }
 
-    //  Definitions
 
     @Override
     public Void visit(FunctionInvocation functionInvocation, Void param) {
@@ -276,7 +273,6 @@ public class TypeCheckingVisitor extends AbsVisitor<Void, Void> implements Visit
         return null;
     }
 
-    //  Statements
 
     @Override
     public Void visit(LogicOperation logical, Void param) {

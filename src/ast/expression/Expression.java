@@ -1,9 +1,9 @@
 package ast.expression;
 
-import ast.Localable;
+import ast.Locatable;
 import ast.type.Type;
 
-public interface Expression extends Localable {
+public interface Expression extends Locatable {
     boolean getLvalue();
 
     void setLvalue(boolean lvalue);

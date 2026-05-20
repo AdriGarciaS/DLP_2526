@@ -1,8 +1,8 @@
 package ast.definition;
 
-import ast.AbsLocalable;
+import ast.AbsLocatable;
 
-public abstract class AbsDefinition extends AbsLocalable implements Definition {
+public abstract class AbsDefinition extends AbsLocatable implements Definition {
     protected String name;
     protected int scope;
 

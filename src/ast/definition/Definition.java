@@ -1,9 +1,9 @@
 package ast.definition;
 
-import ast.Localable;
+import ast.Locatable;
 import ast.type.Type;
 
-public interface Definition extends Localable {
+public interface Definition extends Locatable {
     String getName();
 
     public int getScope();

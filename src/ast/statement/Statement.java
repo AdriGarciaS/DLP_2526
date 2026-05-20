@@ -1,6 +1,6 @@
 package ast.statement;
 
-import ast.Localable;
+import ast.Locatable;
 
-public interface Statement extends Localable {
+public interface Statement extends Locatable {
 }

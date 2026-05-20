@@ -9,12 +9,13 @@ public class VoidType extends AbsType implements Type {
 
     @Override
     public int numberOfBytes() {
-        return 0;
+         new ErrorType(0 ,0 , "The numberOfBytes method should never be called in Void type");
+        return -1;
     }
 
     @Override
     public boolean isBuiltIn() {
-        return true;
+        return false;
     }
 
     @Override

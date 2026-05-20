@@ -1,10 +1,10 @@
 package ast.type;
 
-import ast.AbsLocalable;
-import ast.Localable;
+import ast.AbsLocatable;
+import ast.Locatable;
 import semantics.Visitor;
 
-public class RecordField extends AbsLocalable implements Localable {
+public class RecordField extends AbsLocatable implements Locatable {
     private String name;
     private Type fieldType;
     private int offset;
