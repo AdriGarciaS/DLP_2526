@@ -333,7 +333,10 @@ public class TypeCheckingVisitor extends AbsVisitor<Void, Void> implements Visit
     @Override
     public Void visit(Variable variable, Void param) {
         variable.setLvalue(true);
-        variable.setType(variable.getDefinition().getType());
+
+        if(variable.getDefinition() == null)
+            variable.setType(new ErrorType(variable.getLine(), variable.getColumn(), "This variable has not been previously defined"));
+        else {variable.setType(variable.getDefinition().getType());}
         return null;
     }
 

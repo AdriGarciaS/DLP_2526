@@ -49,25 +49,32 @@ varDefinition returns [List<VariableDefinition> ast = new ArrayList<VariableDefi
 
 mainFunctionDefinition returns [FunctionDefinition ast]
     locals [List<VariableDefinition> localVars = new ArrayList<VariableDefinition>(),
-            List<Statement> localStmts = new ArrayList<Statement>()]:
+            List<Statement> localStmts = new ArrayList<Statement>(),
+            List<Locatable> fullbody = new ArrayList<Locatable>()]:
     returnT='void' name='main' '('')' '{'
-        (v=varDefinition { $localVars.addAll($v.ast); })*
-        (s=statement { $localStmts.addAll($s.ast); })*
+        //(v=varDefinition { $localVars.addAll($v.ast); })*
+        //(s=statement { $localStmts.addAll($s.ast); })*
+        (v=varDefinition{ $localVars.addAll($v.ast); $fullbody.addAll($v.ast);}|s=statement{ $localStmts.addAll($s.ast);$fullbody.addAll($s.ast);})*
     '}'
-    {$ast = new FunctionDefinition( $name.getLine(), $name.getCharPositionInLine()+1, new VoidType(), $name.text, new ArrayList<VariableDefinition>(), $localVars, $localStmts);}
+    {$ast = new FunctionDefinition( $name.getLine(), $name.getCharPositionInLine()+1, new VoidType(), $name.text, new ArrayList<VariableDefinition>(), $localVars, $localStmts, $fullbody);}
     ;
 
 functionDefinition returns [FunctionDefinition ast]
-    locals [List<Statement> localStmts = new ArrayList<Statement>()]:
+locals [List<VariableDefinition> localVars = new ArrayList<VariableDefinition>(),
+            List<Statement> localStmts = new ArrayList<Statement>(),
+            List<Locatable> fullbody = new ArrayList<Locatable>()]:
     returnT=functionReturnType id1=ID '(' args=functionDefinitionArgs')' '{'
-        vars=functionLocalVar
-        (s=statement { $localStmts.addAll($s.ast); })*
+        //vars=functionLocalVar
+        //(s=statement { $localStmts.addAll($s.ast); })*
+        (v=varDefinition{ $localVars.addAll($v.ast); $fullbody.addAll($v.ast);}|s=statement{ $localStmts.addAll($s.ast);$fullbody.addAll($s.ast);})*
     '}'
-    {$ast = new FunctionDefinition($id1.getLine(), $id1.getCharPositionInLine()+1, $returnT.ast, $id1.text, $args.ast, $vars.ast, $localStmts);}
+    {$ast = new FunctionDefinition( $id1.getLine(), $id1.getCharPositionInLine()+1, $returnT.ast, $id1.text, $args.ast, $localVars, $localStmts, $fullbody);}
     ;
 
+
+
 functionLocalVar returns [List<VariableDefinition> ast = new ArrayList<VariableDefinition>()]:
-    (v1=varDefinition { $ast.addAll($v1.ast); })*
+    (v1=varDefinition {  $ast.addAll($v1.ast); })*
     ;
 
 // includes empity args

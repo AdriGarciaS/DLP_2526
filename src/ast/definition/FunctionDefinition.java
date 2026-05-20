@@ -1,5 +1,6 @@
 package ast.definition;
 
+import ast.Locatable;
 import ast.statement.Statement;
 import ast.type.FunctionType;
 import ast.type.Type;
@@ -11,15 +12,17 @@ public class FunctionDefinition extends AbsDefinition implements Definition {
     private List<Statement> bodyStatements;
     private List<VariableDefinition> localVariables;
     private FunctionType functionType;
+    private List<Locatable> fullBody;
 
     public FunctionDefinition(int line, int column, Type returnType, String name,
                               List<VariableDefinition> args,
                               List<VariableDefinition> localVariables,
-                              List<Statement> bodyStatements) {
+                              List<Statement> bodyStatements, List<Locatable> fullBody) {
         super(line, column, name);
         this.bodyStatements = bodyStatements;
         this.functionType = new FunctionType(args, returnType);
         this.localVariables = localVariables;
+        this.fullBody = fullBody;
     }
 
     public List<Statement> getBodyStatements() {
@@ -44,6 +47,14 @@ public class FunctionDefinition extends AbsDefinition implements Definition {
 
     public void setLocalVariables(List<VariableDefinition> localVariables) {
         this.localVariables = localVariables;
+    }
+
+    public List<Locatable> getFullBody() {
+        return fullBody;
+    }
+
+    public void setFullBody(List<Locatable> fullBody) {
+        this.fullBody = fullBody;
     }
 
     @Override

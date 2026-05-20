@@ -1,0 +1,14 @@
+int a;
+void f (){
+    write b;
+    double b;
+}
+void main(){
+    if(a){
+        //int b;
+    }
+    else {
+        while(!a) write 1;
+
+        }
+}

@@ -32,7 +32,7 @@ public class Cast extends AbsExpression implements Expression {
 
     @Override
     public String toString() {
-        return STR."[\{getLine()}:\{getColumn()}]\{localeToString()}";
+        return getLine() + ":" + getColumn();
     }
 
     @Override

@@ -31,6 +31,8 @@ public class Main {
         // Modify your previous parser.program() line with:
         Program ast = parser.program().ast;
 
+        if (parser.getNumberOfSyntaxErrors() > 0 )
+            return;
         Visitor<Void, Void> identification = new IdentificationVisitor();
         ast.accept(identification, null);
 

@@ -1,4 +1,4 @@
-// Generated from C:/Users/adrig/Desktop/DLP/DLP_Lab06/src/parser/Cmm.g4 by ANTLR 4.13.2
+// Generated from C:/Users/UO300042/Desktop/DLP_2526/src/parser/Cmm.g4 by ANTLR 4.13.2
 package parser;
 
     import ast.*;

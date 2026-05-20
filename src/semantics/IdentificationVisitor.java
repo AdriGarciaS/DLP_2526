@@ -62,8 +62,9 @@ public class IdentificationVisitor extends AbsVisitor<Void, Void> {
         st.set();
 
         definition.getFunctionType().getParameters().forEach(p -> p.accept(this, param));
-        definition.getLocalVariables().forEach(local -> local.accept(this, param));
-        definition.getBodyStatements().forEach(stmt -> stmt.accept(this, param));
+        definition.getFullBody().forEach( sentence -> sentence.accept(this, param));
+        //definition.getLocalVariables().forEach(local -> local.accept(this, param));
+        //definition.getBodyStatements().forEach(stmt -> stmt.accept(this, param));
 
         // 3. Cerrar ámbito
         st.reset();

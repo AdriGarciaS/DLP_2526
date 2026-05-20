@@ -1,0 +1,13 @@
+int a;
+void f (){
+    a = 1;
+    double b;
+    b = 2.2;
+    write a, b;
+}
+void main(){
+    f();
+    char c;
+    c = 'a';
+    write c;
+}
