@@ -51,6 +51,7 @@ public class Main {
 
             AddressCGVisitor addressCG = new AddressCGVisitor(codeGenerator);
             ValueCGVisitor valueCG = new ValueCGVisitor(codeGenerator, addressCG);
+            addressCG.setValueCGVisitor(valueCG);
             ExecuteCGVisitor executeCG = new ExecuteCGVisitor(codeGenerator, valueCG, addressCG);
 
             ast.accept(executeCG, null);
